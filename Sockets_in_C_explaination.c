@@ -893,7 +893,7 @@ close(sockfd);
 	 recvfrom(sockfd, buffer, MAXLINE,
 				MSG_WAITALL, (struct sockaddr *) &socket_info,
                 &lenght_of_socket_info);
-	printf("Server : %s\n", buffer);
+	printf("message : %s\n", buffer);
 	
 	close(sockfd);
 
@@ -934,7 +934,7 @@ close(sockfd);
 	 recvfrom(sockfd, buffer, MAXLINE,
 				MSG_WAITALL, (struct sockaddr *) &socket_info,
                 &lenght_of_socket_info);
-	printf("Server : %s\n", buffer);
+	printf("message : %s\n", buffer);
 
 	close(sockfd);
 

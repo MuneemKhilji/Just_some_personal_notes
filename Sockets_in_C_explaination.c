@@ -9,15 +9,83 @@
 #include<string.h>
 #include <stdlib.h>
 #include<signal.h>
-int sendall( int socket, char *buf, int *len ) {
-int total = 0;// how many bytes we've sent
-int bytesleft = *len; // how many bytes we have left to send
-int data_send_on_the_specifc_call;
+
+//please note:
+	//u might have to add extra recvfrom or recv calls
+    //if the sendall_udp_ipv6 or send_all_udp_ipv4
+    //or send_all functions
+    // make more than one send or sendto
+    // function calls in the code examples i gave
+    //that use sendall_udp_ipv6 or send_all_udp_ipv4
+    //or send_all functions. it is because these functions
+    //have one goal which is to send a buffer
+    //no matter how big it is and no matter how many
+    //sendto or send() calls it takes, meanwhile
+    // one recv or recvfrom function call
+    // can only recieve the 
+    // data  from one sendto or send function. it cant
+    //recieve the data from a lot sendto and send
+    // function calls  hence u might have to use more 
+    // than one recv or recvfrom function call.
+
+// both the port and ip used in the code
+//has to be available. 
+
+#define PORT	 7777
+#define MAXLINE 1024
+int sendall( int socket, char *buf, size_t *len ) {
+size_t total = 0;// how many bytes we've sent
+size_t bytesleft = *len; // how many bytes we have left to send
+size_t data_send_on_the_specifc_call;
 while( total < *len ) {
 data_send_on_the_specifc_call = 
 send
 ( socket, buf + total, bytesleft, 0 );
 if (data_send_on_the_specifc_call == -1) {
+*len = total; // set len to the amount of bytes
+//sent successfully
+return -1; 
+}
+total += data_send_on_the_specifc_call;
+bytesleft -= data_send_on_the_specifc_call;
+}
+*len = total; // set len to the amount of bytes
+//sent successfully
+return 0; 
+}
+
+int sendall_udp_ipv4( int socket, char *buf, size_t *len, struct sockaddr_in destination,  socklen_t size_of_sockaddr_in) {
+size_t total = 0;// how many bytes we've sent
+size_t bytesleft = *len; // how many bytes we have left to send
+size_t data_send_on_the_specifc_call;
+while( total < *len ) {
+data_send_on_the_specifc_call = 
+sendto
+( socket, buf + total, bytesleft, 0,(struct sockaddr*)&destination, 
+size_of_sockaddr_in );
+if (data_send_on_the_specifc_call == -1) {
+*len = total; // set len to the amount of bytes
+//sent successfully
+return -1; 
+}
+total += data_send_on_the_specifc_call;
+bytesleft -= data_send_on_the_specifc_call;
+}
+*len = total; // set len to the amount of bytes
+//sent successfully
+return 0; 
+}
+int sendall_udp_ipv6( int socket, char *buf, size_t *len, struct sockaddr_in6 destination,  socklen_t size_of_sockaddr_in) {
+size_t total = 0;// how many bytes we've sent
+size_t bytesleft = *len; // how many bytes we have left to send
+size_t data_send_on_the_specifc_call;
+while( total < *len ) {
+data_send_on_the_specifc_call = 
+sendto
+( socket, buf + total, bytesleft, 0,(struct sockaddr*)&destination, size_of_sockaddr_in );
+if (data_send_on_the_specifc_call == -1) {
+*len = total; // set len to the amount of bytes
+//sent successfully
 return -1; 
 }
 total += data_send_on_the_specifc_call;
@@ -397,7 +465,7 @@ if(argc!=3){
 //the last argument is the size of the  sockaddr_in
 //or sockaddr_in6
 //  structure that u passed in the second argument
-// example of a ipv4 cleint:
+// example of a ipv4 tcp cleint:
 int cleint_socket = -1;
 struct sockaddr_in server_addr;
 cleint_socket = socket(AF_INET, 
@@ -419,7 +487,7 @@ SOCK_STREAM, 0);
 
 
     
-// example of ipv6 client:
+// example of ipv6 tcp client:
 int cleint_socket_ = -1;
 struct sockaddr_in6 addr;
 cleint_socket_ = socket(AF_INET6, 
@@ -488,8 +556,9 @@ SOCK_STREAM, 0);
         //        char            *ai_canonname;
         //        struct addrinfo *ai_next;
 
-//to send data the function is:
-// int send( int sockfd, const void* msg, int length, int flags );
+
+//to send data using tcp the function is:
+//ssize_t send(int sockfd, const void buf[.len], size_t len, int flags);
 //first argument is the socket u wonna send
 //the data through.
 //in case of client u have to put ur cleint socket
@@ -518,10 +587,17 @@ SOCK_STREAM, 0);
 // example of a function that uses the send() function
 //to keep on sending data from a buffer
 // until all the data in the buffer is sent:
-// int sendall( int socket, char *buf, int *len ) {
-// int total = 0;// how many bytes we've sent
-// int bytesleft = *len; // how many  bytes we have left to send
-// int data_send_on_the_specifc_call;
+//note all these send function calls that the 
+// sendall function would do 
+// will be recieved from individual recv calls.
+//in other words if ur sendall function calls the 
+//send function 4 times then on the destination
+//side the data would still be recieved from 4 
+//recv function calls.
+// int sendall( int socket, char *buf, size_t *len ) {
+// size_t total = 0;// how many bytes we've sent
+// size_t bytesleft = *len; // how many bytes we have left to send
+// size_t data_send_on_the_specifc_call;
 // while( total < *len ) {
 // data_send_on_the_specifc_call = 
 // send
@@ -538,8 +614,9 @@ SOCK_STREAM, 0);
 // }
 
 
-//to receive data the function is:
-// int receive( int sockfd, const void* msg, int length, int flags );
+//to receive data using tcp the function is:
+// ssize_t recv(int sockfd, void buf[.len], size_t len,
+//                         int flags);
 //first argument is the socket u wonna recieve
 //the data through.
 //in case of client u have to put ur cleint socket
@@ -561,6 +638,133 @@ SOCK_STREAM, 0);
 //data recieved
 
 
+// to send function using udp the function is:
+// int sendto( int sockfd, const void* msg, int length, 
+// unsigned int flags, const struct sockaddr* to, 
+// socklen_t tolength )
+//first argument is the socket u wonna send
+//the data through.
+//in case of client u have to put ur cleint socket
+//in the first argument.
+//in case of the server u have to put the socket
+// that accept functin returned.
+//second argument is the data u wonna send.
+//third argument is the length of the data that
+//  u wonna send
+//the forth argument  contains some flags but for 
+// now we dont need
+//to go deep into it.
+//the fifth argument is the pointer to 
+// sockaddr_in or sockaddr_in6
+// structure which has to be typecasted to 
+// sockaddr*. the fifth argument will
+//contain socket info like ip and port of the 
+//destination and any other fields that exists
+// in the sockaddr_in structure or the sockaddr_in6 
+// structure.
+//the last argument is the size of the fifth argument
+//the return value is -1 on error and 
+// when no error is there then its
+// the amount of bytes left
+// to send from the second argument.
+//the ideal way is that u would keep on sending
+//from the second argument until all the data
+//in the second argument is sent.
+//to do that u would keep an account of the amount
+//of data left and the amount of data sent.
+//amount of data sent
+//would be the value passed
+//in the third argument minus
+//  the return value of send function.
+// example of a function that uses the sendto() 
+// function to keep on sending data from a buffer
+// until all the data in the buffer is sent:
+//note all these sendto function calls that the 
+// sendall_udp_ipv4 or sendall_udp_ipv6 
+//does would be recieved from individual recvfrom calls.
+//in other words if ur sendall_udp_ipv4 or 
+//sendall_udp_ipv6 functions calls the 
+//sendto function 4 times then on the destination
+//sides the data would still be recieved from 4 
+//recvfrom function calls.
+// int sendall_udp_ipv4( int socket, char *buf, size_t *len, struct sockaddr_in destination,  socklen_t size_of_sockaddr_in) {
+// size_t total = 0;// how many bytes we've sent
+// size_t bytesleft = *len; // how many bytes we have left to send
+// size_t data_send_on_the_specifc_call;
+// while( total < *len ) {
+// data_send_on_the_specifc_call = 
+// sendto
+// ( socket, buf + total, bytesleft, 0,(struct sockaddr*)&destination, size_of_sockaddr_in );
+// if (data_send_on_the_specifc_call == -1) {
+// *len = total; // set len to the amount of bytes
+// //sent successfully
+// return -1; 
+// }
+// total += data_send_on_the_specifc_call;
+// bytesleft -= data_send_on_the_specifc_call;
+// }
+// *len = total; // set len to the amount of bytes
+// //sent successfully
+// return 0; 
+// }
+// int sendall_udp_ipv6( int socket, char *buf, size_t *len, struct sockaddr_in6 destination,  socklen_t size_of_sockaddr_in) {
+// size_t total = 0;// how many bytes we've sent
+// size_t bytesleft = *len; // how many bytes we have left to send
+// size_t data_send_on_the_specifc_call;
+// while( total < *len ) {
+// data_send_on_the_specifc_call = 
+// sendto
+// ( socket, buf + total, bytesleft, 0,(struct sockaddr*)&destination, size_of_sockaddr_in );
+// if (data_send_on_the_specifc_call == -1) {
+// *len = total; // set len to the amount of bytes
+// //sent successfully
+// return -1; 
+// }
+// total += data_send_on_the_specifc_call;
+// bytesleft -= data_send_on_the_specifc_call;
+// }
+// *len = total; // set len to the amount of bytes
+// //sent successfully
+// return 0; 
+// }
+
+
+// to recieve function using udp the function is:
+// ssize_t recvfrom(int sockfd, void buf[restrict .len], 
+// size_t len,int flags,
+//struct sockaddr *_Nullable restrict src_addr,
+//socklen_t *_Nullable restrict addrlen);
+//first argument is the socket u wonna recieve
+//the data through.
+//in case of client u have to put ur cleint socket
+//in the first argument
+//in case of the server u have to put the socket
+//that accept function returned.
+//second argument is the destination of the data 
+// received.
+//third argument is the length of the data u wonna 
+//recieve
+// forth argument contains some flags but for 
+// now we dont need
+//to go any deep into it.
+//the fifth argument is the pointer to 
+// sockaddr_in or sockaddr_in6
+// structure which has to be typecasted to 
+// sockaddr*. the fifth argument will
+//contain socket info like ip and port of the 
+//source and any other fields that exists
+// in the sockaddr_in structure or the sockaddr_in6 
+// structure.
+//the last argument is the size of the fifth argument
+//the return value is -1 on error.
+//Datagram sockets in various domains 
+// (e.g., the UNIX and Internet domains) permit 
+// zero-length datagrams.  When such a datagram is
+//received, the return value is 0.
+//the return value is the number of bytes received
+//if there was no error and if the datagram isnt a
+// zero-length datagram
+
 
 //example of a code that uses getaddrinfo
 //as client to get the  information of the 
@@ -570,6 +774,7 @@ SOCK_STREAM, 0);
 //us then attempts to connect to each socket
 //and tries to send a packet and recieves a response.
 // example:
+
 
 struct addrinfo *socketinfo;
 int result = getaddrinfo(
@@ -623,8 +828,11 @@ socketinfo->ai_addr,
 socketinfo->ai_addrlen)==-1){
     perror("\nconnecting failed because:");
 }
-send(sockfd, "GET / HTTP/1.0\r\n\r\n",  
-sizeof(char)*(strlen("GET / HTTP/1.0\r\n\r\n")+1), 0);
+size_t len=sizeof(char)*(strlen("GET / HTTP/1.0\r\n\r\n")+1);
+sendall(sockfd, "GET / HTTP/1.0\r\n\r\n",&len);
+if(len==-1){
+    printf("\n error in sendall function\n");
+}
 //note:
 // u might have to send a different http packet 
 //based on the website to get the response that
@@ -645,6 +853,93 @@ else{
 close(sockfd);
 }
 
+
+// in udp client and server relationship dosent exist.
+//the relationship in udp is simple
+//  two computers sending packets
+//to each other using sendto and recvfrom
+// ipv4 udp example:
+//the code sends a packet to its own socket and
+//recieves that same packet and then prints it
+	
+
+	
+{
+	int sockfd;
+	char buffer[MAXLINE];
+	char *hello = "Hello from client";
+	struct sockaddr_in	 socket_info;
+	
+	// Creating socket file descriptor
+	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
+	}
+	
+	memset(&socket_info, 0, sizeof(socket_info));
+		
+	// Filling server information
+	socket_info.sin_family = AF_INET;
+	socket_info.sin_port = htons(PORT);
+	socket_info.sin_addr.s_addr = htonl(INADDR_ANY);
+	if(bind(sockfd, (struct sockaddr*)&socket_info, sizeof(struct sockaddr_in))==-1)	{
+        perror("bind failed in udp ipv4,and the  error is :");
+    }
+    size_t len = strlen("this is a message")+1;
+    socklen_t lenght_of_socket_info=0;
+	sendall_udp_ipv4(sockfd,"this is a message", &len, socket_info, sizeof(socket_info));
+	printf("Hello message sent.\n");
+			
+	 recvfrom(sockfd, buffer, MAXLINE,
+				MSG_WAITALL, (struct sockaddr *) &socket_info,
+                &lenght_of_socket_info);
+	printf("Server : %s\n", buffer);
+	
+	close(sockfd);
+
+
+}
+// ipv6 udp example:
+//the code sends a packet to its own socket and
+//recieves that same packet and then prints it
+	
+
+	
+{
+	int sockfd;
+	char buffer[MAXLINE];
+	char *hello = "Hello from client";
+	struct sockaddr_in6	 socket_info;
+	
+	// Creating socket file descriptor
+	if ( (sockfd = socket(AF_INET6, SOCK_DGRAM, 0)) < 0 ) {
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
+	}
+	
+	memset(&socket_info, 0, sizeof(socket_info));
+		
+	// Filling server information
+  socket_info.sin6_family = AF_INET6;
+    socket_info.sin6_port = htons(5000);
+   socket_info.sin6_addr = in6addr_any;
+   	if(bind(sockfd, (struct sockaddr*)&socket_info, sizeof(struct sockaddr_in6))==-1)	{
+        perror("bind failed in udp ipv6,and the  error is :");
+    }
+    size_t len = strlen("this is a message")+1;
+    socklen_t lenght_of_socket_info=0;
+	sendall_udp_ipv6(sockfd,"this is a message", &len, socket_info , sizeof(socket_info));
+	printf("Hello message sent.\n");
+			
+	 recvfrom(sockfd, buffer, MAXLINE,
+				MSG_WAITALL, (struct sockaddr *) &socket_info,
+                &lenght_of_socket_info);
+	printf("Server : %s\n", buffer);
+
+	close(sockfd);
+
+
+}
 
     return 0;
 }

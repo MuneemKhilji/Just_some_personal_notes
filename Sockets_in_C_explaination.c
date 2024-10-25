@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -806,12 +807,12 @@ for(int sockfd, counter=0;(void*)((*socketinfo).ai_next)!=NULL;counter++){
 
     if(socketinfo->ai_family==AF_INET6){
         struct sockaddr_in6 info=*((struct sockaddr_in6*)socketinfo->ai_addr);
-        char ipaddress[16];
+        uint16_t ipaddress[8];
         memcpy(ipaddress, &(info.sin6_addr), 
         sizeof(info.sin6_addr));
-        for(int i=0;i<16;i++){
-        printf("%02X", ipaddress[i]);
-        if(i!=15){
+        for(int i=0;i<8;i++){
+        printf("%04X", ipaddress[i]);
+        if(i!=7){
             printf(":");
         }
         }

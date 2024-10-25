@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <bits/pthreadtypes.h>
 #include <netinet/in.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,7 +11,9 @@
 #include<string.h>
 #include <stdlib.h>
 #include<signal.h>
-
+#include<pthread.h>
+#include<wait.h>
+pthread_mutex_t mutex=PTHREAD_MUTEX_INITIALIZER;
 //please note:
 	//u might have to add extra recvfrom or recv calls
     //if the sendall_udp_ipv6 or send_all_udp_ipv4
@@ -775,7 +778,7 @@ SOCK_STREAM, 0);
 //us then attempts to connect to each socket
 //and tries to send a packet and recieves a response.
 // example:
-
+pthread_mutex_init(&mutex, NULL);
 
 struct addrinfo *socketinfo;
 int result = getaddrinfo(
@@ -786,10 +789,14 @@ if (result != 0) {
 return -1;
 }
 for(int sockfd, counter=0;(void*)((*socketinfo).ai_next)!=NULL;counter++){
+    pthread_mutex_lock(&mutex);
+
     printf("\ngonna handle socket number %d of the server\n", counter);
+
     socketinfo=socketinfo->ai_next;//pointing
     //socketinfo to the next element in the link list
     if(socketinfo->ai_family==AF_INET){
+
         struct sockaddr_in info=*((struct sockaddr_in*)socketinfo->ai_addr);
         uint8_t ipaddress[4];
         memcpy(ipaddress, &(info.sin_addr), 
@@ -803,36 +810,46 @@ for(int sockfd, counter=0;(void*)((*socketinfo).ai_next)!=NULL;counter++){
     }
     printf("\n");
 
+
     }
 
     if(socketinfo->ai_family==AF_INET6){
+
         struct sockaddr_in6 info=*((struct sockaddr_in6*)socketinfo->ai_addr);
         uint16_t ipaddress[8];
         memcpy(ipaddress, &(info.sin6_addr), 
         sizeof(info.sin6_addr));
         for(int i=0;i<8;i++){
-        printf("%04X", ipaddress[i]);
+        printf("%04x", ipaddress[i]);
         if(i!=7){
             printf(":");
         }
         }
         printf("\n");
+
     }
      sockfd= socket(socketinfo->ai_family, 
      socketinfo->ai_socktype, 
      socketinfo->ai_protocol);
      if(sockfd==-1){
+
         perror("\n socket creation failed because of:");
+
      }
 if( connect(sockfd, 
 socketinfo->ai_addr, 
 socketinfo->ai_addrlen)==-1){
+
     perror("\nconnecting failed because:");
+
 }
+
 size_t len=sizeof(char)*(strlen("GET / HTTP/1.0\r\n\r\n")+1);
 sendall(sockfd, "GET / HTTP/1.0\r\n\r\n",&len);
 if(len==-1){
+
     printf("\n error in sendall function\n");
+
 }
 //note:
 // u might have to send a different http packet 
@@ -840,15 +857,22 @@ if(len==-1){
 //u are expecting
 char response[10000];
 memset(response, 0, sizeof(char)*10000);
+pthread_mutex_unlock(&mutex);
+
 int pid__=fork();//pid will contain the pid
 //of child process in the parent process
+
 if (pid__==0) {
 recv(sockfd, response, sizeof(char)*10000, 0);
+pthread_mutex_lock(&mutex);
 printf("\nthe response is:%s\n", response);
+pthread_mutex_unlock(&mutex);
+
 return 0;
 }
 else{
     sleep(1);
+
     kill(pid__, 9);
 }
 close(sockfd);
